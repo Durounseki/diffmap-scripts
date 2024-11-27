@@ -1,8 +1,12 @@
+#Vicsek simulation using intrinsic noise in reorientation updating rule and nearest neighbor simulation using a cell list.
+
+#Calculates the nearest neighbors cells
 @inline function neighbors(d::Int)
     n = CartesianIndices((fill(-1:1, d)...,))
     return n[1:fld(length(n), 2)]
 end
 
+#Partitions the space into cells
 @inline function CellGrid(d::Int, L, r₀)
     indices = CartesianIndices((fill(-1:Int(fld(L,r₀)), d)...,))
     grid = Dict{CartesianIndex{d}, Vector{Int}}()
@@ -12,6 +16,7 @@ end
     return grid
 end
 
+#Returns the indices of each particle on each cell including ghost cells to handle periodic boundary conditions
 function CellList(P, L, r₀, cells)
     n=length(P)
     d=length(P[1])
@@ -21,6 +26,7 @@ function CellList(P, L, r₀, cells)
     periodicBC(cells,L,r₀)
 end
 
+#Returns ghost cells to handle periodic boundary conditions
 function ghostCells(L,r₀)
     tbBoundary=[CartesianIndex(i,Int(fld(L,r₀))-1) for i in 0:Int(fld(L,r₀))-1]
     append!(tbBoundary,[CartesianIndex(i,0) for i in 0:Int(fld(L,r₀))-1])
@@ -28,6 +34,7 @@ function ghostCells(L,r₀)
     append!(rlBoundary,[CartesianIndex(0,i) for i in 0:Int(fld(L,r₀))-1])
     return tbBoundary, rlBoundary
 end
+
 
 function periodicBC(cells,L,r₀)
     maxInd=Int(fld(L,r₀))
@@ -52,11 +59,11 @@ function periodicBC(cells,L,r₀)
     end
 end
 
+
 @inline function cellNeighbors!(ps, is, p, r)
     for (k, i) in enumerate(is[1:(end-1)])
         for j in is[(k+1):end]
             if norm(p[i]-p[j])<= r₀
-                # println(i,j,p[i],p[j],norm(p[i]-p[j]))
                 ps[i][j]=1
                 ps[j][i]=1
             else
@@ -72,7 +79,6 @@ end
     for i in is
         for j in js
             if norm(p[i]-p[j])<= r₀
-                # println(i,j,p[i],p[j],norm(p[i]-p[j]))
                 ps[i][j]=1
                 ps[j][i]=1
             else
@@ -84,6 +90,7 @@ end
     end
 end
 
+#FRN (fixed radius neighbors) is a matrix of zeros and ones, where FRN_{ij}=1 if distance between p_i and p_j is less than the radius.
 function near_neighbors(cells, P, r₀, FRN)
     offsets = neighbors(length(P[1]))
     # Iterate over non-empty cells
@@ -101,6 +108,7 @@ function near_neighbors(cells, P, r₀, FRN)
     end
 end
 
+
 function emptyCells(cells)
     for (ci,cell) in cells
         while length(cell)>0
@@ -109,31 +117,27 @@ function emptyCells(cells)
     end
 end
 
+
+#Evolve the system one step
 function fly(X,Θ,V,dt,L,r₀,N,v₀,η,cells,fixedRN)
     CellList(X, L, r₀, cells)
-    # println("ok")
     near_neighbors(cells,X,r₀,fixedRN)
-    # println("ok")
     
     Vmean=[normalize(mean(V[Is])) for Is in [findall(x->x>0,ff) for ff in fixedRN]]
-    # println("ok")
-    # Θnew=[u[2] > 0 ? acos(u[1])+η*(rand()-0.5) : 2π-acos(u[1])+η*(rand()-0.5) for u in Vmean]
     Θnew=[ atan(u[2],u[1])+η*(rand()-0.5) for u in Vmean]
-    # println("ok")
     Vnew=[v₀*[cos(tt),sin(tt)] for tt in Θnew]
-    # println("ok")
     
     for i in 1:N
         V[i]=Vnew[i]
         Θ[i]=Θnew[i]
         X[i]=X[i]+dt*Vnew[i]
     end
-    # println("ok")
+
     PosPeriodicBC(X,L)
-    # println("ok")
     
 end
 
+#Apply periodic boundary conditions
 function PosPeriodicBC(X,L)
     for x in X
         x[1]=mod(x[1],L)
@@ -141,6 +145,7 @@ function PosPeriodicBC(X,L)
     end
 end
 
+#Simulate one trajectory
 function birdTrajectory(X,V,dt,N,nT,r₀,v₀,η,L,d)
     cells=CellGrid(d,L,r₀)
     fixedRN=[zeros(Int,N) for i in 1:N]
@@ -164,6 +169,8 @@ function birdTrajectory(X,V,dt,N,nT,r₀,v₀,η,L,d)
     close(Vio)
 end
 
+#Ensemble of M realizations with N particles and nT time steps of size dt, interaction radius r₀, constant flying speed v₀ intrinsic noise η, arena size LxL (d=2)
+#Returns only the last state
 function DataSet2(N,M,dt,nT,r₀,v₀,η,L,d)
     
     X₀=[[rand(2)*L for i in 1:N] for j in 1:M]
@@ -188,8 +195,7 @@ function DataSet2(N,M,dt,nT,r₀,v₀,η,L,d)
     for i1 in 1:N
         fixedRN[i1][i1]=1
     end
-    
-    # S=[momentConfig(renormalisedData(X₀[1]),renormalisedData(V₀[1]))]
+
     S=[momentConfig(X₀[1] ./ L,V₀[1] ./ v₀)]
     
     for i in 2:M
@@ -206,7 +212,6 @@ function DataSet2(N,M,dt,nT,r₀,v₀,η,L,d)
         for i1 in 1:N
             fixedRN[i1][i1]=1
         end
-        # append!(S,[momentConfig(renormalisedData(X₀[i]),renormalisedData(V₀[i]))])
         append!(S,[momentConfig(X₀[i] ./ L,V₀[i] ./ v₀)])
     end
 
@@ -214,6 +219,7 @@ function DataSet2(N,M,dt,nT,r₀,v₀,η,L,d)
     
 end
 
+#Returns a trajectory of of length nT*M, returns samples at every nT time steps
 function dynamicDataset(N,M,dt,nT,r₀,v₀,η,L,d)
     X=Vector{Vector{Vector{Float64}}}(undef,0)
     X₀=[rand(2)*L for i in 1:N]
@@ -244,7 +250,7 @@ function dynamicDataset(N,M,dt,nT,r₀,v₀,η,L,d)
         fixedRN[i1][i1]=1
     end
         
-    S=[momentConfig((X[end] .- [[L/2,L/2]]) ./ L,V[end] ./ v₀)]
+    S=[momentConfig(X₀[1] ./ L,V₀[1] ./ v₀)]
     
     for i in 2:M
         push!(X,deepcopy(X[end]))
@@ -262,8 +268,7 @@ function dynamicDataset(N,M,dt,nT,r₀,v₀,η,L,d)
         for i1 in 1:N
             fixedRN[i1][i1]=1
         end
-        append!(S,[momentConfig((X[end] .- [[L/2,L/2]]) ./ L,V[end] ./ v₀)])
-        # S=[momentConfig(X[end] ./ L,V[end] ./ v₀)]
+        append!(S,[momentConfig(X₀[i] ./ L,V₀[i] ./ v₀)])
     end
 
     return X, V, S
@@ -291,6 +296,7 @@ end
 # 1226
 # 1482
 
+#Calculated the optimum value of epsilon for a given number of particles, speed, interaction radius and noise intensity
 function etaSet(N,M,dt,nT,r₀,v₀,ηs,L,d,ϵs,D;maxoutdim=3)
     
     filename1=@sprintf("./vicsekEvalsN%dL%2.lfr%.2lfv%.2lf.csv",N,L,r₀,v₀)
@@ -340,6 +346,7 @@ function etaSet(N,M,dt,nT,r₀,v₀,ηs,L,d,ϵs,D;maxoutdim=3)
     close(Io3)
 end
 
+#Calculates local minima, returns the largest value of epsilon that attains a minimum if it exist otherwise a fixed value
 function ϵOptimum(D,ϵs;ϵ_0=0.25)
     SGE = SGECriteria(D,ϵs)
     #Using the Peaks Library

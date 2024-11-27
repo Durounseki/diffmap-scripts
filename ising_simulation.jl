@@ -1,3 +1,4 @@
+#Ising simulation using glauber dynamics
 rand_ising2d(m, n=m) = rand(Int8[-1, 1], m, n)
 
 Random.seed!(4649)
@@ -24,20 +25,12 @@ function ising2d_evolve!(s, β, niters; rng=default_rng())
     end
 end
 
-function isingE(A,N;J=1)
-    E=0
-    for i in 0:N-1
-        for j in 0:N-1
-            E += -J*A[i+1,j+1]*(A[mod(i+1,N)+1,j+1]+A[mod(i-1,N)+1,j+1]+A[i+1,mod(j+1,N)+1]+A[i+1,mod(j-1,N)+1])#Nearest neighbours energy
-        end
-    end
-    return E/2
-end
-
+#Initial random configuration (infinite T)
 function isingInitialEnsemble(M,N)
     return [rand_ising2d(N) for i in 1:M]
 end
 
+#Ensemble of M realizations, all starting at infinite T and quenching to finite T = 1/β
 function isingDataSet(M,N,β,n_frames;n_t=1,rng=Random.default_rng())
 
     X=Vector{Matrix{Int64}}(undef,0)
@@ -67,23 +60,19 @@ function isingDistanceMatrix(A)
 end
 
 function isingDiffMapDistance(A,M,N,ϵ)
-    
-    # p=Progress(M*M)
     @sync for i in 1:M
         @spawn for j in 1:M
             D[i,j]=exp(-isingDistance(A[i],A[j])/((2*N)^2*ϵ))
-            # next!(p)
         end
     end
 end
 
-function isingSteadyDataSet(M,N,β,n_frames,n_t;rng=default_rng())
-    # X=[ising0condition(N)*(-1)^i for i in 1:M]
+#Ensemble of M realizations, only returns the final state quenched at finite temperature T of each realization
+function isingSteadyDataSet(M,N,β,n_t;rng=default_rng())
     X=isingInitialEnsemble(M,N)
     for x in X
         ising2d_evolve!(x,β,n_t;rng)
     end
-    
     return X
 end
 

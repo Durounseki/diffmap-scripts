@@ -132,12 +132,3 @@ end
 function ConnectivityCriteria(D,ϵs)
     return [ConnectivityCriterion(D,ϵ) for ϵ in ϵs]
 end
-
-function momentConfigVicsek(X,U)
-    #Data set has X ∈ [0,L]×[0,L] and max(vᵢ) = v₀ = 3    
-    # Z=[vcat(X[i]/10.0,U[i]/3.0) for i in 1:length(X)]
-    Z=[vcat(X[i],U[i]) for i in eachindex(X)]
-    meanZ = mean(Z)
-    covZ = cov(Z)
-    return [meanZ[1],meanZ[2],meanZ[3],meanZ[4],covZ[1,1],covZ[1,2],covZ[1,3],covZ[1,4],covZ[2,2],covZ[2,3],covZ[2,4],covZ[3,3],covZ[3,4],covZ[4,4]]
-end

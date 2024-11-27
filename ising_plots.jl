@@ -117,13 +117,6 @@ function plot_projection(mode_ϵ_low_2,mode_ϵ_low_3,mode_ϵ_hi_2,mode_ϵ_hi_3,o
     scatter!(ax, mode_ϵ_low_2, mode_ϵ_low_3, color=order_param, marker = :dtriangle, markersize=ms, colormap=colormap1)
     scatter!(ax, mode_ϵ_hi_2, mode_ϵ_hi_3, color=order_param, marker = :diamond, markersize=ms, colormap=colormap1)
 
-    # theta=designMatrix(mode_ϵ_high,CanonicalPolynomialBasis(1,1))
-    # beta=LSregresor(mean.(X),theta)
-
-    # js = 1:length(mode_ϵ_high)
-
-    # lines!(ax,mode_ϵ_high, mode_ϵ_high .* beta[1][2] .+ beta[1][1], color = :black, linewidth = 6)
-
     ax.xticklabelsvisible=label
     ax.yticklabelsvisible=label
 
@@ -140,14 +133,6 @@ function plot_projection3(mode_2,mode_3,order_param; w=400, h=350, ms = 10, labe
     colormap1 = RGBAf.(Colors.color.(to_colormap(:roma)), 0.75)
 
     scatter!(ax, mode_2, mode_3, color=order_param, marker = :dtriangle, markersize=ms, colormap=colormap1)
-    # scatter!(ax, mode_ϵ_hi_2, mode_ϵ_hi_3, color=order_param, marker = :diamond, markersize=ms, colormap=colormap1)
-
-    # theta=designMatrix(mode_ϵ_high,CanonicalPolynomialBasis(1,1))
-    # beta=LSregresor(mean.(X),theta)
-
-    # js = 1:length(mode_ϵ_high)
-
-    # lines!(ax,mode_ϵ_high, mode_ϵ_high .* beta[1][2] .+ beta[1][1], color = :black, linewidth = 6)
 
     ax.xticklabelsvisible=label
     ax.yticklabelsvisible=label
